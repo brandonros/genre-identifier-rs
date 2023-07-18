@@ -2,7 +2,7 @@ mod db;
 #[cfg(feature = "openai")]
 mod openai;
 #[cfg(feature = "llama2")]
-mod replicate;
+mod llama2;
 mod concurrency;
 mod rate_limit;
 mod structs;
@@ -23,7 +23,7 @@ use tokio::sync::Mutex;
 use crate::openai::*;
 
 #[cfg(feature = "llama2")]
-use crate::replicate::*;
+use crate::llama2::*;
 
 use crate::rate_limit::RateLimiterWrapper;
 use crate::structs::*;
