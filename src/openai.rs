@@ -1,6 +1,43 @@
 use reqwest::{Client, header};
+use serde::{Serialize, Deserialize};
 use std::time::Duration;
-use crate::structs::*;
+
+#[derive(Serialize, Deserialize)]
+pub struct Usage {
+    pub completion_tokens: usize,
+    pub prompt_tokens: usize,
+    pub total_tokens: usize
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Message {
+    pub content: String,
+    pub role: String
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Choice {
+    pub finish_reason: String,
+    pub index: usize,
+    pub message: Message
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ChatCompletionResponse {
+    pub id: String,
+    pub created: usize,
+    pub model: String,
+    pub object: String,
+    pub usage: Usage,
+    pub choices: Vec<Choice>
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ChatCompletionRequest {
+    pub max_tokens: Option<usize>,
+    pub model: String,
+    pub messages: Vec<Message>
+}
 
 pub struct OpenAIChatCompletionClient {
     client: Client,
@@ -32,16 +69,18 @@ impl OpenAIChatCompletionClient {
                 }
             ]
         };
+        let stringified_request_body = serde_json::to_string(&request_body)?;
 
         let mut request_headers = header::HeaderMap::new();
         request_headers.insert("Authorization", header::HeaderValue::from_str(&format!("Bearer {}", self.api_key))?);
+        request_headers.insert("Content-Type", header::HeaderValue::from_str("application/json")?);
 
         // Perform request.
         let response = self.client
             .post("https://api.openai.com/v1/chat/completions")
             .headers(request_headers)
             .timeout(Duration::from_millis(5000))
-            .json(&request_body)
+            .body(stringified_request_body)
             .send()
             .await?;
 
