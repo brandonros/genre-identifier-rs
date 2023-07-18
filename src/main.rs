@@ -116,12 +116,13 @@ fn main() -> anyhow::Result<()> {
 
     // spawn async task into runtime
     return runtime.block_on(async {
-        // open songs
-        let path = Path::new("/Users/brandon/Desktop/songs.txt");
+        // open file + read lines into Vec<String>
+        let args: Vec<String> = std::env::args().collect();
+        let path = Path::new(&args[1]);
         let file = File::open(&path)?;
         let reader = BufReader::new(file);
         let lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
-        // process each song concurrently
+        // process each line concurrently
         concurrency::concurrency_wrapper(lines, CONCURRNECY_LIMIT, |line| async move {
             return process_line(line).await;
         }).await?;
