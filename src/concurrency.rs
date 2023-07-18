@@ -1,4 +1,4 @@
-use futures::{Future, StreamExt, TryStreamExt, stream};
+use futures::{Future, StreamExt, TryStreamExt};
 
 pub async fn concurrency_wrapper<Fut, T, F>(rows: Vec<T>, limit: usize, cb: F) -> anyhow::Result<()>
 where
@@ -6,9 +6,8 @@ where
     Fut: Future<Output = anyhow::Result<()>> + Send + 'static,
     F: Fn(T) -> Fut + Send + Sync + Copy + 'static,
 {
-    let stream = stream::iter(rows);
-    return stream
-        .map(Ok)
+    return futures::stream::iter(rows)
+        .map(Ok) // TODO: do not understand why .map(Ok)
         .try_for_each_concurrent(limit,|row| async move {
             return cb(row).await;
         }
