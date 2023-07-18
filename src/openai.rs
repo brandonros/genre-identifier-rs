@@ -46,7 +46,7 @@ impl OpenAIChatCompletionClient {
             .await?;
 
         let stringified_response_body = response.text().await?;
-        println!("stringified_response_body = {stringified_response_body}");
+        log::debug!("stringified_response_body = {stringified_response_body}");
 
         let response_body: ChatCompletionResponse = serde_json::from_str(&stringified_response_body)?;
 

@@ -4,6 +4,7 @@ mod concurrency;
 mod rate_limit;
 mod structs;
 mod retry;
+mod logger;
 
 use std::path::Path;
 use std::fs::File;
@@ -35,12 +36,12 @@ static STATE: Lazy<Mutex<State>> = Lazy::new(|| {
 });
 
 async fn process_line(line: String) -> anyhow::Result<()> {
-    println!("Processing line: {}", &line);
+    log::info!("Processing line: {}", &line);
 
     // check cache
     let state = STATE.lock().await;
     if state.results.contains_key(&line) {
-        println!("skipping due to cache");
+        log::info!("skipping due to cache");
         return Ok(());
     }
     drop(state);
@@ -54,9 +55,9 @@ async fn process_line(line: String) -> anyhow::Result<()> {
         return OPENAI_CLIENT.chat_completion(&message_content).await;
     }).await;
     if result.is_err() {
-        println!("failed to get response after retries, skipping");
-        println!("err = {:?}", result.err());
-        println!("line = {}", line);
+        log::error!("failed to get response after retries, skipping");
+        log::error!("err = {:?}", result.err());
+        log::error!("line = {}", line);
         return Ok(());
     }
     let response_body = result.unwrap();
@@ -78,21 +79,21 @@ async fn process_line(line: String) -> anyhow::Result<()> {
     let total_tokens = state.total_tokens;
 
     // log tokens and costs
-    println!("total_completion_tokens = {total_completion_tokens} total_prompt_tokens = {total_prompt_tokens} total_tokens = {total_tokens} total_input_cost = ${total_input_cost:.4} total_output_cost = ${total_output_cost:.4} total_cost = ${total_cost:.4}");
+    log::info!("total_completion_tokens = {total_completion_tokens} total_prompt_tokens = {total_prompt_tokens} total_tokens = {total_tokens} total_input_cost = ${total_input_cost:.4} total_output_cost = ${total_output_cost:.4} total_cost = ${total_cost:.4}");
 
     // parse response message
     let response_message = &response_body.choices[0].message.content;
     let parse_result = serde_json::from_str::<Song>(&response_message);
     if parse_result.is_err() {
-        println!("failed to parse response, skipping");
-        println!("err = {:?}", parse_result.err());
-        println!("line = {}", line);
+        log::error!("failed to parse response, skipping");
+        log::error!("err = {:?}", parse_result.err());
+        log::error!("line = {}", line);
         return Ok(());
     }
     let parsed_response_message = parse_result.unwrap();
 
     // log message
-    println!("result: {},{}", line, serde_json::to_string(&parsed_response_message)?);
+    log::info!("result: {},{}", line, serde_json::to_string(&parsed_response_message)?);
 
     // push result
     state.results.insert(line, parsed_response_message);
@@ -104,19 +105,23 @@ async fn process_line(line: String) -> anyhow::Result<()> {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // init logger
+    logger::init_stdout_logger();
+
     // build runtime
-    let rt = runtime::Builder::new_current_thread()
+    let runtime = runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .unwrap();
 
     // spawn async task into runtime
-    return rt.block_on(async {
+    return runtime.block_on(async {
         // open songs
         let path = Path::new("/Users/brandon/Desktop/songs.txt");
         let file = File::open(&path)?;
         let reader = BufReader::new(file);
         let lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
+        // process each song concurrently
         concurrency::concurrency_wrapper(lines, CONCURRNECY_LIMIT, |line| async move {
             return process_line(line).await;
         }).await?;
