@@ -1,0 +1,23 @@
+[package]
+name = "genre-identifier-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# async runtime
+tokio = { version = "1.29", features = ["rt", "macros"] }
+# http client
+reqwest = { version = "0.11", features = ["json"] }
+# json
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0" }
+# retries
+tokio-retry = "0.3"
+# rate limit
+governor = "0.6.0"
+# static init
+once_cell = "1.18.0"
+# errors
+anyhow = "1.0"
+# concurrency
+futures = "0.3.28"
