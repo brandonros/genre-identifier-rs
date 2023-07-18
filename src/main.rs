@@ -104,7 +104,7 @@ async fn process_line(line: String) -> anyhow::Result<()> {
     return Ok(());
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> anyhow::Result<()> {
     // init logger
     logger::init_stdout_logger();
 
