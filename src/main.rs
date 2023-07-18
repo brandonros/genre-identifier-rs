@@ -51,7 +51,7 @@ async fn process_line(line: String) -> anyhow::Result<()> {
         // Rate limit.
         RATE_LIMITER.wait().await;
         // Settings.
-        let message_content = format!("The song '{}' is of which genre? Respond in JSON using fields `artist`, `genre`, and `track_title`.", line);
+        let message_content = format!("The song '{line}' is of which genre? Respond in JSON using fields `artist`, `genre`, and `track_title`.");
         return OPENAI_CLIENT.chat_completion(&message_content).await;
     }).await;
     if result.is_err() {
@@ -74,12 +74,10 @@ async fn process_line(line: String) -> anyhow::Result<()> {
     let total_input_cost = (state.total_prompt_tokens as f64 / 1000.0) * input_token_cost_per_1000;
     let total_output_cost = (state.total_completion_tokens as f64 / 1000.0) * output_token_cost_per_1000;
     let total_cost = total_input_cost + total_output_cost;
-    let total_completion_tokens = state.total_completion_tokens;
-    let total_prompt_tokens = state.total_prompt_tokens;
-    let total_tokens = state.total_tokens;
 
     // log tokens and costs
-    log::info!("total_completion_tokens = {total_completion_tokens} total_prompt_tokens = {total_prompt_tokens} total_tokens = {total_tokens} total_input_cost = ${total_input_cost:.4} total_output_cost = ${total_output_cost:.4} total_cost = ${total_cost:.4}");
+    log::info!("total_completion_tokens = {} total_prompt_tokens = {} total_tokens = {}", state.total_completion_tokens, state.total_prompt_tokens, state.total_tokens);
+    log::info!("total_input_cost = ${total_input_cost:.4} total_output_cost = ${total_output_cost:.4} total_cost = ${total_cost:.4}");
 
     // parse response message
     let response_message = &response_body.choices[0].message.content;
